@@ -1,14 +1,21 @@
+var RED = 0;
+var BLUE = 1;
+var BLACK = 2;
+var GREEN = 3;
+
+var stoneGapX = 10;
+var stoneGapY = 5;
+
+var stoneWidth = 38;
+var stoneHeight = 50;
+
+
 var rakeStartX = 34;
 var rakeStartY = 500;
 
-var rakeWidth = 900;
-var rakeHeight = 220;
+var rakeWidth = (stoneWidth  + stoneGapX) * 14;
+var rakeHeight = stoneHeight * 2 + stoneGapY;
 
-var stoneGapX = 10;
-var stoneGapY = 10;
-
-var stoneWidth = rakeWidth / 14;
-var stoneHeight = rakeHeight / 2 - stoneGapY;
 
 function GameView() {
     var self = this;
@@ -19,25 +26,43 @@ function GameView() {
 
     self.DragEngine = new DragEngine(self);
 
-    self.stoneSheet = new createjs.SpriteSheet(data);
+    self.stoneData = new SpriteData();
+    self.stoneSheet = new createjs.SpriteSheet(self.stoneData.StoneSheet);
     self.stoneS = [];
     self.stoneContainer = new createjs.Container();
 
-    self.buildStone = function (s) {
-	var shape = new createjs.Shape();
+    self.buildStone = function(s) {
+	var shape = new createjs.Sprite(self.stoneSheet);
+	shape.gotoAndStop(s.number - 1 + s.color * 13);
 
-	shape.graphics.beginFill("#ddd").beginStroke("#000").drawRect(0, 0, stoneWidth, stoneHeight);
-
-	shape.shadow = new createjs.Shadow("#000000", 1,1,5);
+	return shape;
+    }
+    
+    self.buildEmptyStone = function() {
+	var shape = new createjs.Sprite(self.stoneSheet);
+	shape.gotoAndStop(4 * 13);
 
 	return shape;
     }
 
-    self.buildStone2 = function(s) {
+    self.buildFakeStone = function() {
 	var shape = new createjs.Sprite(self.stoneSheet);
-	shape.gotoAndStop(s.number - 1);
+	shape.gotoAndStop(4 * 13 + 1);
 
 	return shape;
+    }
+
+    self.buildMiddleStone = function () {
+	var stone = self.buildEmptyStone();
+
+	var ox = rakeStartX + rakeWidth / 2;
+	var oy = rakeStartY / 2;
+
+	self.DragEngine.buildDraggable(stone, null, function(s) {
+	    self.DragEngine.dragStone(s, ox, oy, true);
+	});
+
+	self.DragEngine.dragStone(stone, ox, oy);
     }
 
     self.buildRake = function () {
@@ -50,19 +75,21 @@ function GameView() {
 
     self.buildStones = function (stones) {
 	stones.forEach(function(item) {
-	    var stone = self.buildStone2(item);
-	    
-	    self.DragEngine.buildDraggable(stone, null, function (s) {
-		self.DragEngine.rakeSnap(s);
-	    });
-	    self.rakeAddStone(stone);
+	    self.rakeAddStone(item);
 	});
     }
 
-    self.rakeAddStone = function (s) {
-	self.DragEngine.rakeSnap(s, true);
-	self.stoneS.push(s);
+    self.rakeAddStone = function (item) {
+	var stone = self.buildStone(item);
+	    
+	self.DragEngine.buildDraggable(stone, null, function (s) {
+	    self.DragEngine.rakeSnap(s);
+	});
+
+	self.DragEngine.rakeSnap(stone, true);
+	self.stoneS.push(stone);
     }
+
     
     self.buildScene = function() {
 	self.buildRake();
@@ -70,14 +97,16 @@ function GameView() {
 	self.stage.addChild(self.stoneContainer);
 
 	self.buildStones([
-	    {number: 1},
-	    {number: 2},
-	    {number: 3},
-	    {number: 4},
-	    {number: 5},
+	    {number: 1, color: RED},
+	    {number: 2, color: GREEN},
+	    {number: 3, color: BLUE},
+	    {number: 4, color: BLACK},
+	    {number: 5, color: RED},
 
 			 ]);
 
+	self.buildMiddleStone();
+	
 	
 	self.stage.update();
 	createjs.Ticker.addEventListener("tick", self.stage);

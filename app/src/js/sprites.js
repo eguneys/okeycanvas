@@ -1,17 +1,88 @@
-var data = {
-    images: ["35avu68.png"],
-    frames: [
-	[134, 182, 50, 60, 0],
-	[192, 182, 50, 60, 0],
-	[247, 182, 50, 60, 0],
-	[300, 182, 50, 60, 0],
-	[355, 182, 50, 60, 0],
-	[410, 182, 50, 60, 0],
-	[565, 182, 50, 60, 0],
-	[620, 182, 50, 60, 0],
-	[775, 182, 50, 60, 0],
-	[820, 182, 50, 60, 0],
-	[875, 182, 50, 60, 0],
-	[920, 182, 50, 60, 0],
-    ]
-};
+function SpriteData() {
+    var self = this;
+
+    self.frameData = function (dx, dy) {
+	var xdelta = 0;
+	var ydelta = 0;
+	return function(array) {
+	    array[0] += xdelta;
+	    array[1] += ydelta;
+	    xdelta += dx;
+	    ydelta += dy;
+	    return array;
+	};
+    }
+
+    self.frameStone = self.frameData(0, 50);
+    self.frameStone2 = self.frameData(0, 50);
+    self.frameStone3 = self.frameData(0, 50);
+    self.frameStone4 = self.frameData(0, 50);
+    self.frameStone5 = self.frameData(0, 50);
+    
+    self.StoneSheet = {
+	images: ["taslar.png"],
+	frames: [
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+	    self.frameStone([0, 0, 38, 50, 0]),
+
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+	    self.frameStone2([38, 0, 38, 50, 0]),
+
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+	    self.frameStone3([76, 0, 38, 50, 0]),
+
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+	    self.frameStone4([114, 0, 38, 50, 0]),
+
+	    self.frameStone5([152, 0, 38, 50, 0]), // Empty Stone
+	    self.frameStone5([152, 0, 38, 50, 0]), // Fake Stone
+	    
+	]
+    };
+    
+
+}
