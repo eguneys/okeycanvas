@@ -1,0 +1,3 @@
+function pageLoaded() {
+    var canvas = $('#testcanvas');
+}
