@@ -1,0 +1,22 @@
+function GameModel () {
+    var self = this;
+
+    self.players = {};
+    self.rack = [];
+    self.wastestones = {
+	BOTTOM: [],
+	LEFT: [],
+	TOP: [],
+	RIGHT: []
+    };
+
+    self.turn;
+    
+}
+
+function GameController() {
+    var self = this;
+
+
+    
+}

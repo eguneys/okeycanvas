@@ -1,0 +1,470 @@
+var RED = 0;
+var BLUE = 1;
+var BLACK = 2;
+var GREEN = 3;
+
+var stoneGapX = 10;
+var stoneGapY = 5;
+
+var stoneWidth = 38 * 1.5;
+var stoneHeight = 50 * 1.5;
+
+
+var rakeStartX = 34;
+var rakeStartY = 500;
+
+var rakeWidth = (stoneWidth  + stoneGapX) * 14;
+var rakeHeight = stoneHeight * 2 + stoneGapY;
+
+var middleStoneOffsets = {
+    BOTTOM: {
+	x: rakeStartX + rakeWidth - stoneWidth - stoneGapX * 2,
+	y: rakeStartY - stoneHeight - stoneGapY * 2
+    },
+    RIGHT: {
+	x: rakeStartX + rakeWidth - stoneWidth - stoneGapX * 2,
+	y: 40
+    },
+    TOP: {
+	x: rakeStartX + stoneGapX * 2,
+	y: 40
+    },
+    LEFT: {
+	x: rakeStartX + stoneGapX * 2,
+	y: rakeStartY - stoneHeight - stoneGapY * 2
+    }
+}
+
+var userWidth = 100;
+var userHeight = 100;
+
+var userOffsets = {
+    BOTTOM: {
+	x: rakeStartX + rakeWidth / 2 - userWidth / 2,
+	y: rakeStartY - userHeight,
+    }, RIGHT: {
+	x: rakeStartX + rakeWidth - userWidth,
+	y: rakeStartY / 2
+    }, TOP: {
+	x: rakeStartX + rakeWidth / 2 - userWidth / 2,
+	y: userHeight / 2
+    },
+    LEFT: {
+	x: rakeStartX + userWidth / 2,
+	y: rakeStartY / 2
+    }
+}
+
+
+function GameEvents (base) {
+    var self = this;
+
+    self.base = base;
+
+    self.drawMiddleStone = new Event(self.base);
+    self.drawBottomStone = new Event(self.base);
+    self.throwStone = new Event(self.base);
+
+    self.sitTable = new Event(self.base);
+}
+
+
+function GameView(stage) {
+    var self = this;
+
+    self.Events = new GameEvents(self);
+
+    self.stage = stage;
+
+    self.rake;
+
+    self.DragEngine = new DragEngine(self);
+
+    self.stoneData = new SpriteData();
+    self.stoneSheet = new createjs.SpriteSheet(self.stoneData.StoneSheet);
+    self.stoneS = [];
+    self.stoneContainer = new createjs.Container();
+
+    self.middleStoneContainer = new createjs.Container();
+
+    self.emptySeats = {};
+
+    self.players = { };
+    
+    self.middleStones = {
+    }
+
+    self.buildPlayer = function (p, side) {
+	var container = new createjs.Container();
+	
+	var name = new createjs.Text(p.name, "20px Arial", "#ff7700");
+	name.x = userOffsets[side].x;
+	name.y = userOffsets[side].y;
+	name.name = "pname";
+
+	container.addChild(name);
+	
+	return container;
+    }
+
+    self.buildEmptySeat = function (side) {
+	var container = new createjs.Container();
+
+	var circle = new createjs.Shape();
+	circle.graphics.beginFill("black").drawCircle(0, 0, 50);
+
+	circle.x = 34;
+	circle.y = 25;
+	
+	var text = new createjs.Text("otur", "40px Arial", "#ffffff");
+	text.x = 0;
+	text.y = 0;
+	
+	container.addChild(circle);
+	container.addChild(text);
+
+	container.side =side;
+
+	container.on("click", function (evt) {
+	    self.Events.sitTable.notify(evt.currentTarget.side);
+	});
+
+	container.x = userOffsets[side].x;
+	container.y = userOffsets[side].y;
+
+
+	self.emptySeats[side] = container;
+	self.stage.addChild(container);
+	
+	return container;
+    }
+
+    self.buildEmptySeats = function () {
+	self.buildEmptySeat("LEFT");
+	self.buildEmptySeat("BOTTOM");
+	self.buildEmptySeat("RIGHT");
+	self.buildEmptySeat("TOP");
+    }
+
+
+    self.turnPlayer = function (side) {
+	var text;
+	if(text = self.players[side].getChildByName("pname")) {
+	    text.outline = 1;
+
+	}
+    }
+    
+    self.sitPlayer = function(p, side) {
+
+	var player = self.buildPlayer(p, side);
+
+	self.stage.removeChild(self.emptySeats[side]);
+	self.emptySeats.side = null;
+
+	self.players[side] = player;
+
+	self.stage.addChild(player);
+    }
+
+    self.buildStone = function(s) {
+	var shape = new createjs.Sprite(self.stoneSheet);
+	shape.gotoAndStop(s.number - 1 + s.color * 13);
+	shape.scaleX = 1.5;
+	shape.scaleY = 1.5;
+	shape.data = s;
+	
+	return shape;
+    }
+    
+    self.buildEmptyStone = function(s) {
+	var shape = new createjs.Sprite(self.stoneSheet);
+	shape.gotoAndStop(4 * 13);
+	
+	shape.scaleX = 1.5;
+	shape.scaleY = 1.5;
+
+
+	shape.data = s;
+
+	return shape;
+    }
+
+    self.buildFakeStone = function() {
+	var shape = new createjs.Sprite(self.stoneSheet);
+	shape.gotoAndStop(4 * 13 + 1);
+	shape.scaleX = 1.5;
+	shape.scaleY = 1.5;
+
+	shape.data = {number: 14}
+	
+	return shape;
+    }
+
+    self.buildMiddleStone = function () {
+	var stone = self.buildEmptyStone();
+
+	var ox = rakeStartX + rakeWidth / 2;
+	var oy = rakeStartY / 2;
+
+	self.DragEngine.buildDraggable(stone, null, function(s, x, y) {
+	    self.DragEngine.dragStone(s, ox, oy, true);
+
+	    if (self.rake.hitTest(x + stoneWidth / 2, y + stoneHeight / 2)) {
+	    
+		self.middleStones.MIDDLE.lastDrop = {x: x, y: y};
+		self.Events.drawMiddleStone.notify();
+	    }
+	    
+	});
+
+	self.DragEngine.dragStone(stone, ox, oy);
+
+	self.middleStones.MIDDLE = stone;
+    }
+
+    
+
+    self.buildThrowStone = function (x, y) {
+	var shape = new createjs.Shape();
+
+	shape.graphics.beginFill("#ddd").drawRect(x, y, stoneWidth, stoneHeight);
+
+	self.stage.addChild(shape);
+
+	return shape;
+    }
+
+    self.buildThrowStones = function () {
+	var bottom = self.buildThrowStone(middleStoneOffsets.BOTTOM.x, middleStoneOffsets.BOTTOM.y);
+	var right = self.buildThrowStone(middleStoneOffsets.RIGHT.x, middleStoneOffsets.RIGHT.y);
+	var top = self.buildThrowStone(middleStoneOffsets.TOP.x, middleStoneOffsets.TOP.y);
+	var left = self.buildThrowStone(middleStoneOffsets.LEFT.x, middleStoneOffsets.LEFT.y);
+	
+	self.middleStones.BOTTOM = bottom;
+	self.middleStones.RIGHT = right;
+	self.middleStones.TOP = top;
+	self.middleStones.LEFT = left;
+	
+
+	
+    }
+    
+    self.buildRake = function () {
+	var shape = new createjs.Shape();
+
+	shape.graphics.beginStroke("#000").beginFill("#daa").drawRect(rakeStartX, rakeStartY, rakeWidth, rakeHeight);
+
+	self.stage.addChild(shape);
+
+	self.rake = shape;
+    }
+
+    self.buildStones = function (stones) {
+	stones.forEach(function(item) {
+	    self.rakeAddStone(item);
+	});
+    }
+
+    self.drawMiddleStone = function(stone) {
+	self.stoneContainer.removeChild(self.middleStones.MIDDLE);
+
+	self.rakeAddStone(stone, self.middleStones.MIDDLE.lastDrop);
+	
+	self.buildMiddleStone();
+    }
+
+    self.drawBottomStone = function(stone) {
+	self.stoneContainer.removeChild(stone);
+	self.rakeAddStone(stone.data, self.middleStones.BOTTOM.lastDrop);
+
+    }
+
+
+    self.addThrowStone = function(stone, side)  {
+	var newstone = self.buildStone(stone);
+	
+	self.middleStoneContainer.addChild(newstone);
+	self.DragEngine.dragStone(newstone, middleStoneOffsets[side].x, middleStoneOffsets[side].y, false);
+
+	if (side == "LEFT") {
+	    self.DragEngine.buildDraggable(newstone, null, function (s, x, y) {
+		if (self.rake.hitTest(x + stoneWidth / 2, y + stoneHeight / 2)) {
+		    
+		    self.middleStones.BOTTOM.lastDrop = { x: x, y: y };
+		    
+		    self.Events.drawBottomStone.notify(s);
+		}
+
+		
+		self.DragEngine.dragStone(newstone, middleStoneOffsets["LEFT"].x, middleStoneOffsets["LEFT"].y, true);
+		 
+	    });
+	}
+    }
+
+    self.throwStone = function(stone, side) {
+	self.rakeRemoveStone(stone);
+
+	self.addThrowStone(stone.data, "BOTTOM");
+
+    }
+
+    self.rakeRemoveStone = function(stone) {
+	self.stoneS.splice(self.stoneS.indexOf(stone), 1);
+	self.stoneContainer.removeChild(stone);
+    }
+    
+
+    self.rakeAddStone = function (item, drop) {
+	var stone = self.buildStone(item);
+	    
+	self.DragEngine.buildDraggable(stone, null, function (s) {
+	    self.DragEngine.rakeSnap(s);
+
+	    if (self.middleStones.BOTTOM.hitTest(s.x + stoneWidth / 2, s.y + stoneHeight / 2)) {
+		self.Events.throwStone.notify(s);
+	    }
+	});
+
+	if (drop) {
+	    stone.x = drop.x;
+	    stone.y = drop.y;
+	}
+	
+	self.DragEngine.rakeSnap(stone, true);
+	self.stoneS.push(stone);
+    }
+
+    
+    self.buildScene = function() {
+
+	self.buildRake();
+	self.buildThrowStones();
+
+	self.buildMiddleStone();
+
+	self.buildEmptySeats();
+
+
+	self.stage.addChild(self.middleStoneContainer);
+	self.stage.addChild(self.stoneContainer);
+
+	self.stage.update();
+	createjs.Ticker.addEventListener("tick", self.stage);
+	createjs.Ticker.setInterval(25);
+	createjs.Ticker.setFPS(60);
+    }
+    
+}
+
+
+
+function DragEngine(base) {
+    var self = this;
+
+    self.base = base;
+    
+    self.buildDraggable = function (s, move, end) {
+	self.base.stoneContainer.addChild(s);
+	
+	s.on("mousedown", function(evt) {
+	    self.base.stoneContainer.setChildIndex(evt.target, self.base.stoneContainer.getNumChildren() - 1);
+	    evt.target.ox = evt.target.x - evt.stageX;
+	    evt.target.oy = evt.target.y - evt.stageY;
+	    
+	});
+	s.on("pressmove", function(evt) {
+	    evt.target.x = evt.stageX + evt.target.ox;
+	    evt.target.y = evt.stageY + evt.target.oy;
+	    self.base.stage.update();
+	});
+
+	s.on("pressup", function(evt) {
+	    if (end) {
+		end(evt.target, evt.stageX + evt.target.ox, evt.stageY + evt.target.oy);
+	    }
+	});
+    }
+
+    self.dragStone = function(s, x, y, animate) {
+	if (animate) {
+	    createjs.Tween.get(s).to({x: x, y: y}, 100, createjs.Ease.linear);
+	} else {
+	    s.x = x;
+	    s.y = y;
+	}
+
+	self.base.stage.update();
+    }
+
+    self.rakeSnap =  function(s, animateDisabled) {
+	self.dragStone(s, self.gridX(s.x), self.snapY(s.y), !animateDisabled);
+    }
+
+    self.gridX = function(x) {
+	if (x < rakeStartX) x = rakeStartX;
+	else if (x > rakeStartX + rakeWidth - stoneWidth) x = rakeStartX + rakeWidth - stoneWidth
+	
+	return x;
+    }
+
+    self.snapY = function (y) {
+	if (y + stoneHeight / 2 > rakeStartY + (rakeHeight / 2))
+	    y = rakeStartY + rakeHeight / 2 + stoneGapY;
+	else
+	    y = rakeStartY;
+	return y ;
+    }
+    
+}
+
+
+
+function MainEvents(base) {
+    var self = this;
+    self.base = base;
+
+    self.playNow = new Event(self.base);
+}
+
+function MainView(stage) {
+    var self = this;
+
+    self.stage = stage;
+
+    self.Events = new MainEvents(self);
+
+    self.buttonContainer = new createjs.Container();
+
+    self.buildScene = function () {
+	self.buildUI();
+    }
+
+    self.buildUI = function() {
+	var button = new createjs.Shape();
+
+	button.graphics.beginFill("#000000").drawRect(0, 0, 100, 100);
+
+	var text = new createjs.Text("Oyna", "20px Arial", "#ffffff");
+
+	text.x = 10;
+	text.y = 10;
+	
+	self.buttonContainer.addChild(button);
+	self.buttonContainer.addChild(text);
+
+	
+	self.buttonContainer.on("click", function (evt) {
+	    self.Events.playNow.notify();
+	});
+
+
+	self.stage.addChild(self.buttonContainer);
+	self.stage.update();
+    }
+
+    self.clearScene = function() {
+	stage.removeAllChildren();
+    }
+}
