@@ -7,11 +7,10 @@ var LEFT = 1;
 var BOTTOM = 2;
 var RIGHT = 3;
 
-var NONE = 0;
-var RED = 1;
-var YELLOW = 2;
-var BLUE = 3;
-var GRAY = 4;
+var RED = 0;
+var BLUE = 1;
+var BLACK = 2;
+var GREEN = 3;
 
 
 function PlayerEvents(base) {
@@ -171,10 +170,12 @@ function OkeyRound(base) {
 		if (sender.ShouldAddStone()) {
 		    self.AutoPlay(sender);
 		} else {
+		    console.log(sender.istaka);
 		    self.PlayerTasAt(sender, sender.istaka[13]);
 		}
 	    });
 	}
+
     }
 
     self.IsTurn = function (player) {
@@ -222,7 +223,8 @@ function OkeyRound(base) {
 		player.notify("game info ortatas", stone);
 		
 	    } else {
-		player.AddStone(self.PrevPlayer(self.turn).wasteStones.pop());
+		player.AddStone(self.players[self.turn].wasteStones.pop());
+		self.base.notifyPlayers('game info yantas');
 	    }
 	}
     }
@@ -257,7 +259,7 @@ function OkeyRound(base) {
 
 	for (var k = 0; k < 2; k++) 
 	for (var i = 1; i<14; i++) {
-	    for (var color = RED; color <= GRAY; color++) {
+	    for (var color = RED; color <= GREEN; color++) {
 		var stone = new OkeyStone({number: i, color: color});
 		self.stones.push(stone);
 	    }
@@ -377,6 +379,10 @@ function OkeyGame () {
     }
 
     self.attachListeners = function(p) {
+	p.socket.on('game request yancek', function () {
+	    self.GameRound.PlayerTasCek(p.data, "yan");
+	});
+	
 	p.socket.on('game request ortacek', function() {
 	    self.GameRound.PlayerTasCek(p.data, "orta");
 	});
@@ -414,7 +420,7 @@ function OkeyServer() {
     self.playerJoin = function (data) {
 	self.totalPlayers++;
 	
-	var p = new OkeyPlayer(data);
+	var p = new OkeyPlayer(data || {Name: 'guest' + self.totalPlayers});
 	self.Players[p.ID] = p;
 	return p;
     }

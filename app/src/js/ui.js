@@ -1,3 +1,21 @@
+var TOP = 0;
+var LEFT = 1;
+var BOTTOM = 2;
+var RIGHT = 3;
+
+var DIRECTION_TOCODE = {
+    TOP: TOP,
+    LEFT: LEFT,
+    BOTTOM: BOTTOM,
+    RIGHT: RIGHT
+}
+var DIRECTION_TOTAG = [
+    "TOP",
+    "LEFT",
+    "BOTTOM",
+    "RIGHT"
+];
+
 var RED = 0;
 var BLUE = 1;
 var BLACK = 2;
@@ -94,10 +112,19 @@ function GameView(stage) {
     self.middleStones = {
     }
 
+    self.wasteStones = {
+	TOP: [],
+	LEFT: [],
+	BOTTOM: [],
+	RIGHT: []
+    }
+
+    self.lastThrowStone;
+
     self.buildPlayer = function (p, side) {
 	var container = new createjs.Container();
 	
-	var name = new createjs.Text(p.name, "20px Arial", "#ff7700");
+	var name = new createjs.Text(p.Name, "20px Arial", "#ff7700");
 	name.x = userOffsets[side].x;
 	name.y = userOffsets[side].y;
 	name.name = "pname";
@@ -140,19 +167,20 @@ function GameView(stage) {
     }
 
     self.buildEmptySeats = function () {
-	self.buildEmptySeat("LEFT");
-	self.buildEmptySeat("BOTTOM");
-	self.buildEmptySeat("RIGHT");
-	self.buildEmptySeat("TOP");
+	if (!self.players["LEFT"]) self.buildEmptySeat("LEFT");
+	if (!self.players["BOTTOM"]) self.buildEmptySeat("BOTTOM");
+	if (!self.players["RIGHT"]) self.buildEmptySeat("RIGHT");
+	if (!self.players["TOP"]) self.buildEmptySeat("TOP");
     }
 
+    self.clearPlayer = function(side) {
+	var text = self.players[side].getChildByName("pname");
+	text.outline = 0;
+    }
 
     self.turnPlayer = function (side) {
-	var text;
-	if(text = self.players[side].getChildByName("pname")) {
-	    text.outline = 1;
-
-	}
+	text = self.players[side].getChildByName("pname");
+	text.outline = 1;
     }
     
     self.sitPlayer = function(p, side) {
@@ -165,9 +193,26 @@ function GameView(stage) {
 	self.players[side] = player;
 
 	self.stage.addChild(player);
+
+	self.stage.update();
+    }
+
+    self.changePlayer = function(p, side) {
+	var player = self.buildPlayer(p, side);
+
+	if(self.players[side]) self.stage.removeChild(self.players[side]);
+	else if (self.emptySeats[side]) self.stage.removeChild(self.emptySeats[side]);
+
+	self.players[side] = player;
+	self.stage.addChild(player);
+
+	self.stage.update();
     }
 
     self.buildStone = function(s) {
+	if (s.number == 14)
+	    return self.buildFakeStone();
+	
 	var shape = new createjs.Sprite(self.stoneSheet);
 	shape.gotoAndStop(s.number - 1 + s.color * 13);
 	shape.scaleX = 1.5;
@@ -215,7 +260,6 @@ function GameView(stage) {
 		self.middleStones.MIDDLE.lastDrop = {x: x, y: y};
 		self.Events.drawMiddleStone.notify();
 	    }
-	    
 	});
 
 	self.DragEngine.dragStone(stone, ox, oy);
@@ -261,8 +305,10 @@ function GameView(stage) {
     }
 
     self.buildStones = function (stones) {
+	var drop = { x: rakeStartX, y: rakeStartY }
 	stones.forEach(function(item) {
-	    self.rakeAddStone(item);
+	    self.rakeAddStone(item, drop);
+	    drop.x += stoneWidth + stoneGapX;
 	});
     }
 
@@ -274,10 +320,16 @@ function GameView(stage) {
 	self.buildMiddleStone();
     }
 
-    self.drawBottomStone = function(stone) {
+    self.drawBottomStone = function() {
+	var stone  = self.middleStones.LEFT;
+	self.middleStoneContainer.removeChild(stone);
 	self.stoneContainer.removeChild(stone);
-	self.rakeAddStone(stone.data, self.middleStones.BOTTOM.lastDrop);
+	self.rakeAddStone(stone.data, self.middleStones.LEFT.lastDrop);
+    }
 
+    self.drawStone = function(side) {
+	self.middleStoneContainer.removeChild(self.wasteStones[side].pop());
+	self.stage.update();
     }
 
 
@@ -287,11 +339,14 @@ function GameView(stage) {
 	self.middleStoneContainer.addChild(newstone);
 	self.DragEngine.dragStone(newstone, middleStoneOffsets[side].x, middleStoneOffsets[side].y, false);
 
+	self.wasteStones[side].push(newstone);
+	
 	if (side == "LEFT") {
 	    self.DragEngine.buildDraggable(newstone, null, function (s, x, y) {
 		if (self.rake.hitTest(x + stoneWidth / 2, y + stoneHeight / 2)) {
-		    
-		    self.middleStones.BOTTOM.lastDrop = { x: x, y: y };
+
+		    self.middleStones.LEFT = s;
+		    self.middleStones.LEFT.lastDrop = { x: x, y: y };
 		    
 		    self.Events.drawBottomStone.notify(s);
 		}
@@ -303,8 +358,11 @@ function GameView(stage) {
 	}
     }
 
-    self.throwStone = function(stone, side) {
+    self.throwStone = function() {
+	var stone = self.lastThrowStone || self.stoneS[self.stoneS.length - 1];
 	self.rakeRemoveStone(stone);
+
+	self.lastThrowStone = null;
 
 	self.addThrowStone(stone.data, "BOTTOM");
 
@@ -323,6 +381,7 @@ function GameView(stage) {
 	    self.DragEngine.rakeSnap(s);
 
 	    if (self.middleStones.BOTTOM.hitTest(s.x + stoneWidth / 2, s.y + stoneHeight / 2)) {
+		self.lastThrowStone = s;
 		self.Events.throwStone.notify(s);
 	    }
 	});
